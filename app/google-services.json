@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "824989915658",
+    "project_id": "agorachatapp-1af01",
+    "storage_bucket": "agorachatapp-1af01.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:824989915658:android:d3c0510eb4693c6e739df3",
+        "android_client_info": {
+          "package_name": "com.agorachatapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "824989915658-325tn1itiajkfei4oe7gmql7v55q7v18.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGTZJqSE4M2Yh88aj9gymbMdgaZsllWM8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "824989915658-325tn1itiajkfei4oe7gmql7v55q7v18.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

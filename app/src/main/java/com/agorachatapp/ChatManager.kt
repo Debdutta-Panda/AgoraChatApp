@@ -18,7 +18,9 @@ class ChatManager(private val mContext: Context) {
                 }
 
                 override fun onMessageReceived(rtmMessage: RtmMessage, peerId: String) {
-                    Log.d("agora_message_123",rtmMessage.text)
+                    mListenerList.forEach {
+                        it.onMessageReceived(rtmMessage,peerId)
+                    }
                 }
 
                 override fun onImageMessageReceivedFromPeer(
