@@ -46,6 +46,14 @@ class PostsServiceImpl(
     private val client: HttpClient
 ) : PostsService {
     override suspend fun createPost(postRequest: PostRequest): PostResponse? {
-        return client.get { url("https://hellomydoc.com/common/chat/hello") }
+        return try {
+            client.post<PostResponse> {
+                url("https://hellomydoc.com/common/chat/hello")
+                contentType(ContentType.Application.Json)
+                body = postRequest
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 }

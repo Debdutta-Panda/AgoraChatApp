@@ -1,5 +1,6 @@
 package com.agorachatapp
 
+import android.content.ContentValues
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -26,13 +27,63 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.Sqlide
 import com.agorachatapp.tokener.rtm.RtmTokenBuilder
+import com.google.gson.Gson
 import io.agora.rtm.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    val chatEntriesTableDefinition = """
+                    CREATE TABLE IF NOT EXISTS chatEntries (
+                        ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        chatId varchar(255) NOT NULL,
+                        sender varchar(255) NOT NULL,
+                        text text,
+                        type varchar(255),
+                        base64 varchar(255),
+                        status INTEGER,
+                        timestamp int
+                    );
+                """.trimIndent()
+    data class Messages(
+        val list: List<MessageContent>
+    ){
+        val jsonString: String
+            get(){
+                return Gson().toJson(this)
+            }
+        companion object{
+            fun fromJsonString(json: String): Messages?{
+                try {
+                    return Gson().fromJson(json, Messages::class.java)
+                } catch (e: Exception) {
+                }
+                return null
+            }
+        }
+    }
+    data class MessageContent(
+        val chatId: String,
+        val sender: String,
+        val timestamp: Long,
+        val text: String? = null,
+        val progress: Float = 100f,
+        val type: String = "text",
+        val base64: String? = null,
+        val status: String? = null
+    ){
+        val jsonString: String
+        get(){
+            return Gson().toJson(this)
+        }
+    }
+
+    private val messageQue = mutableListOf<MessageContent>()
+
+    private var myId: String = ""
     private val messageCardCornerRadius = 6
     private val messageCardCornerElevation = 10
     private val messageCardMargin = 12
@@ -43,7 +94,7 @@ class MainActivity : ComponentActivity() {
         val rtmMessage: RtmMessage,
         val peerId: String? = null,
     )
-    val messages = mutableStateListOf<Message>()
+    val messages = mutableStateListOf<MessageContent>()
     private var peerId: String = ""
     private var mClientListener: MyRtmClientListener? = null
     private var mChatManager: ChatManager? = null
@@ -72,10 +123,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        lifecycleScope.launch {
+        /*lifecycleScope.launch {
             var r = PostsService.create().createPost(PostRequest("hello1"))
             Log.d("ffsfsdfsfsdf",r?.input?:"empty")
-        }
+        }*/
     }
 
     @Composable
@@ -146,12 +197,20 @@ class MainActivity : ComponentActivity() {
 
     private fun sendMessage(text: String) {
         val message = mRtmClient?.createMessage()
-        message?.text = text
+        val messageContent = MessageContent(
+            chatId = guid,
+            text = text,
+            sender = myId,
+            timestamp = utcTimestamp
+        )
+        messageQue.add(messageContent)
+        message?.text = Messages(messageQue).jsonString
 
         if(message==null){
             return
         }
-        mRtmClient?.sendMessageToPeer(peerId,message, SendMessageOptions(), object: ResultCallback<Void>{
+
+        /*mRtmClient?.sendMessageToPeer(peerId,message, SendMessageOptions(), object: ResultCallback<Void>{
             override fun onSuccess(p0: Void?) {
                 messages.add(Message(message))
             }
@@ -160,44 +219,85 @@ class MainActivity : ComponentActivity() {
                 toast("Failed to send message")
             }
 
-        })
+        })*/
+        lifecycleScope.launch {
+            var r = Sqlide{
+                var t = table(chatEntriesTableDefinition)
+                val exist = t.select("*").where("chatId='${messageContent.chatId}'").get().rowCount==1
+                if(!exist){
+                    var inserted = t.insert(
+                        ContentValues().apply {
+                            put("chatId",messageContent.chatId)
+                            put("sender",messageContent.sender)
+                            put("timestamp",messageContent.timestamp)
+                            messageContent.text?.let{
+                                put("text",it)
+                            }
+                            put("type",messageContent.type)
+                            messageContent.base64?.let{
+                                put("base64",it)
+                            }
+                            messageContent.status?.let{
+                                put("status",it)
+                            }
+                        }
+                    )
+                    Log.d("insertedfdfdfdfd",inserted.toString())
+                }
+                else{
+
+                }
+                true
+            }
+            if(r is Exception){
+                Log.d("fdfdfdffd",r.message?:"")
+            }
+            messages.add(messageContent)
+            var result = mRtmClient?.sendMessage(peerId, message, SendMessageOptions())
+            if(result?.success==true){
+                messageQue.clear()
+            }
+            else{
+                toast("Failed to send message")
+            }
+        }
     }
 
     private @Composable
-    fun LazyItemScope.MessageItem(message: Message) {
+    fun LazyItemScope.MessageItem(message: MessageContent) {
         val configuration = LocalConfiguration.current
         Box(modifier = Modifier.fillMaxWidth()){
             Box(modifier = Modifier
-                .width((configuration.screenWidthDp*messageCardMaxSizeFactor).dp)
+                .width((configuration.screenWidthDp * messageCardMaxSizeFactor).dp)
                 .padding(messageCardMargin.dp)
                 .align(
-                    if(message.peerId==null) Alignment.CenterEnd else Alignment.CenterStart
+                    if (message.sender == myId) Alignment.CenterEnd else Alignment.CenterStart
                 )
             ){
                 Card(
                     modifier = Modifier
                         .wrapContentSize()
-                        .align(if(message.peerId==null) Alignment.CenterEnd else Alignment.CenterStart),
+                        .align(if (message.sender == myId) Alignment.CenterEnd else Alignment.CenterStart),
                     elevation = messageCardCornerElevation.dp,
-                    backgroundColor = if(message.peerId==null) Color.White else Color(0xff3838ff),
+                    backgroundColor = if(message.sender == myId) Color.White else Color(0xff3838ff),
                     shape = RoundedCornerShape(
                         topStart = messageCardCornerRadius.dp,
                         topEnd = messageCardCornerRadius.dp,
-                        bottomEnd = if(message.peerId==null) messageCardCornerRadius.dp else 0.dp,
-                        bottomStart = if(message.peerId==null) 0.dp else messageCardCornerRadius.dp
+                        bottomEnd = if(message.sender == myId) messageCardCornerRadius.dp else 0.dp,
+                        bottomStart = if(message.sender == myId) 0.dp else messageCardCornerRadius.dp
                     ),
                 ) {
                     Box(modifier = Modifier
                         .widthIn((configuration.screenWidthDp*messageCardMinSizeFactor).dp,(configuration.screenWidthDp*messageCardMaxSizeFactor).dp)){
                         Column(modifier = Modifier
-                            .align(if(message.peerId==null) Alignment.CenterEnd else Alignment.CenterStart)
+                            .align(if (message.sender == myId) Alignment.CenterEnd else Alignment.CenterStart)
                             .wrapContentSize()
                             .padding(messageCardPadding.dp),
-                            horizontalAlignment = if(message.peerId==null) Alignment.End else Alignment.Start
+                            horizontalAlignment = if(message.sender == myId) Alignment.End else Alignment.Start
                         ){
-                            if(message.peerId!=null){
+                            if(message.sender != myId){
                                 Text(
-                                    message.peerId,
+                                    message.sender,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
@@ -207,8 +307,8 @@ class MainActivity : ComponentActivity() {
                                 )*/
                             }
                             Text(
-                                message.rtmMessage.text,
-                                color = if(message.peerId==null) Color.Blue else Color.White
+                                message.text?:"",
+                                color = if(message.sender == myId) Color.Blue else Color.White
                             )
                             //Text(message.rtmMessage.serverReceivedTs.toString())
                         }
@@ -316,6 +416,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onLoginClick(value: String) {
+        myId = value
         if(value.isEmpty()){
             toast("User ID can not be empty")
             return
@@ -361,7 +462,11 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onMessageReceived(message: RtmMessage, peerId: String) {
-            messages.add(Message(message, peerId))
+            val text = message.text
+            Messages.fromJsonString(text)?.apply {
+                messages.addAll(this.list)
+            }
+
         }
 
         override fun onImageMessageReceivedFromPeer(
