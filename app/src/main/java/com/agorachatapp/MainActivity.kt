@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.Sqlide
+import com.agorachatapp.charc.ChatDb
+import com.agorachatapp.charc.model.ChatPacket
 import com.agorachatapp.tokener.rtm.RtmTokenBuilder
 import com.google.gson.Gson
 import io.agora.rtm.*
@@ -36,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private var lastChatId: String = ""
     val chatEntriesTableDefinition = """
                     CREATE TABLE IF NOT EXISTS chatEntries (
                         ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,7 +72,7 @@ class MainActivity : ComponentActivity() {
         val chatId: String,
         val sender: String,
         val timestamp: Long,
-        val text: String? = null,
+        val data: String? = null,
         val progress: Float = 100f,
         val type: String = "text",
         val base64: String? = null,
@@ -111,6 +114,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             Surface(
                 modifier = Modifier.fillMaxSize(),
@@ -199,7 +203,7 @@ class MainActivity : ComponentActivity() {
         val message = mRtmClient?.createMessage()
         val messageContent = MessageContent(
             chatId = guid,
-            text = text,
+            data = text,
             sender = myId,
             timestamp = utcTimestamp
         )
@@ -230,7 +234,7 @@ class MainActivity : ComponentActivity() {
                             put("chatId",messageContent.chatId)
                             put("sender",messageContent.sender)
                             put("timestamp",messageContent.timestamp)
-                            messageContent.text?.let{
+                            messageContent.data?.let{
                                 put("text",it)
                             }
                             put("type",messageContent.type)
@@ -307,7 +311,7 @@ class MainActivity : ComponentActivity() {
                                 )*/
                             }
                             Text(
-                                message.text?:"",
+                                message.data?:"",
                                 color = if(message.sender == myId) Color.Blue else Color.White
                             )
                             //Text(message.rtmMessage.serverReceivedTs.toString())
@@ -411,17 +415,72 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Text("Login")
                 }
+                Button(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    onClick = {
+                        onUpdateClick(fieldValueState.value)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color.Blue,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Update")
+                }
+            }
+        }
+    }
+
+    private fun onUpdateClick(value: String) {
+        lifecycleScope.launch {
+            ChatDb("deb").apply {
+                put(
+                    ChatPacket(
+                        chatId = lastChatId,
+                        sender = "deb",
+                        receiver = "pan",
+                        timestamp = utcTimestamp,
+                        data = ChatPacket.ChatPacketData(
+                            text = "Hi"
+                        ),
+                        meta = ChatPacket.ChatPacketMeta(
+                            status = "456"
+                        )
+                    )
+                )
             }
         }
     }
 
     private fun onLoginClick(value: String) {
-        myId = value
+        lifecycleScope.launch {
+            ChatDb("deb").apply {
+                put(
+                    ChatPacket(
+                        chatId = guid.apply {
+                                            this@MainActivity.lastChatId = this
+                        },
+                        sender = "deb",
+                        receiver = "pan",
+                        timestamp = utcTimestamp,
+                        data = ChatPacket.ChatPacketData(
+                            text = "Hi"
+                        ),
+                        meta = ChatPacket.ChatPacketMeta(
+                            status = "127"
+                        )
+                    )
+                )
+            }
+        }
+        /*myId = value
         if(value.isEmpty()){
             toast("User ID can not be empty")
             return
         }
-        doLogin(value)
+        doLogin(value)*/
     }
 
     private fun doLogin(userId: String) {

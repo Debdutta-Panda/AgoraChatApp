@@ -142,6 +142,14 @@ class Sqlide private constructor(){
                 get(){
                     return array?.joinToString(",")?:""
                 }
+            val map: Map<String,String>
+            get(){
+                val r = mutableMapOf<String,String>()
+                header?.forEachIndexed { index,item->
+                    r[item] = array?.get(index).toString()
+                }
+                return r
+            }
             val size: Int
                 get(){
                     return array?.size?:0
@@ -364,6 +372,10 @@ class Sqlide private constructor(){
         }
         fun insert(cv: ContentValues): Long? {
             return db?.insert(name,null,cv)
+        }
+
+        fun update(cv: ContentValues,where: String): Int{
+            return (db?.update(name, cv, where,null))?:0
         }
 
         fun insert(valuesCommand: String){
