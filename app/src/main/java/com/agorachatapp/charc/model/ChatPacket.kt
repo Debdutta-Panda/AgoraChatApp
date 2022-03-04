@@ -3,8 +3,10 @@ package com.agorachatapp.charc.model
 import com.google.gson.Gson
 import kotlinx.serialization.Serializable
 
+
+@Serializable
 data class ChatPackets(
-    val packets: List<ChatPackets>? = null
+    val items: List<ChatPacket>
 )
 
 @Serializable

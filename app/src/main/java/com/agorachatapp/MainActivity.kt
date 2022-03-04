@@ -29,7 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.Sqlide
 import com.agorachatapp.charc.ChatDb
+import com.agorachatapp.charc.ChatServer
 import com.agorachatapp.charc.model.ChatPacket
+import com.agorachatapp.charc.model.ChatPackets
 import com.agorachatapp.tokener.rtm.RtmTokenBuilder
 import com.google.gson.Gson
 import io.agora.rtm.*
@@ -435,33 +437,35 @@ class MainActivity : ComponentActivity() {
 
     private fun onUpdateClick(value: String) {
         lifecycleScope.launch {
-            ChatDb("deb").apply {
-                put(
-                    ChatPacket(
-                        chatId = lastChatId,
-                        sender = "deb",
-                        receiver = "pan",
-                        timestamp = utcTimestamp,
-                        data = ChatPacket.ChatPacketData(
-                            text = "Hi"
-                        ),
-                        meta = ChatPacket.ChatPacketMeta(
-                            status = "456"
+            ChatServer("https://hellomydoc.com/common/chat").apply {
+                val r = puts(
+                    ChatPackets(items = listOf(
+                        ChatPacket(
+                            chatId = lastChatId,
+                            sender = "deb",
+                            receiver = "pan",
+                            timestamp = utcTimestamp,
+                            data = ChatPacket.ChatPacketData(
+                                text = "Hi"
+                            ),
+                            meta = ChatPacket.ChatPacketMeta(
+                                status = "456"
+                            )
                         )
-                    )
+                    ))
                 )
+                Log.d("fdfdfdff1258",r.toString())
             }
+
         }
     }
 
     private fun onLoginClick(value: String) {
         lifecycleScope.launch {
-            ChatDb("deb").apply {
-                put(
+            ChatServer("https://hellomydoc.com/common/chat").apply {
+                val r = put(
                     ChatPacket(
-                        chatId = guid.apply {
-                                            this@MainActivity.lastChatId = this
-                        },
+                        chatId = guid,
                         sender = "deb",
                         receiver = "pan",
                         timestamp = utcTimestamp,
@@ -469,11 +473,13 @@ class MainActivity : ComponentActivity() {
                             text = "Hi"
                         ),
                         meta = ChatPacket.ChatPacketMeta(
-                            status = "127"
+                            status = "123"
                         )
                     )
                 )
+                Log.d("fdfdfdff1258",r.toString())
             }
+
         }
         /*myId = value
         if(value.isEmpty()){
