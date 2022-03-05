@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.Sqlide
-import com.agorachatapp.charc.ChatDb
 import com.agorachatapp.charc.ChatServer
 import com.agorachatapp.charc.model.ChatPacket
 import com.agorachatapp.charc.model.ChatPackets
@@ -204,7 +203,7 @@ class MainActivity : ComponentActivity() {
     private fun sendMessage(text: String) {
         val message = mRtmClient?.createMessage()
         val messageContent = MessageContent(
-            chatId = guid,
+            chatId = newUid,
             data = text,
             sender = myId,
             timestamp = utcTimestamp
@@ -441,7 +440,19 @@ class MainActivity : ComponentActivity() {
                 val r = puts(
                     ChatPackets(items = listOf(
                         ChatPacket(
-                            chatId = lastChatId,
+                            chatId = newUid,
+                            sender = "deb",
+                            receiver = "pan",
+                            timestamp = utcTimestamp,
+                            data = ChatPacket.ChatPacketData(
+                                text = "Hi"
+                            ),
+                            meta = ChatPacket.ChatPacketMeta(
+                                status = "456"
+                            )
+                        ),
+                        ChatPacket(
+                            chatId = newUid,
                             sender = "deb",
                             receiver = "pan",
                             timestamp = utcTimestamp,
@@ -463,9 +474,9 @@ class MainActivity : ComponentActivity() {
     private fun onLoginClick(value: String) {
         lifecycleScope.launch {
             ChatServer("https://hellomydoc.com/common/chat").apply {
-                val r = put(
+                /*val r = put(
                     ChatPacket(
-                        chatId = guid,
+                        chatId = newUid,
                         sender = "deb",
                         receiver = "pan",
                         timestamp = utcTimestamp,
@@ -477,6 +488,8 @@ class MainActivity : ComponentActivity() {
                         )
                     )
                 )
+                Log.d("fdfdfdff1258",r.toString())*/
+                val r = getChat("4b9140e2-f36a-401f-ae3d-dceb4cfcc4df1646463305916")
                 Log.d("fdfdfdff1258",r.toString())
             }
 

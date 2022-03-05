@@ -1,10 +1,7 @@
 package com.agorachatapp.charc
 
 import android.util.Log
-import com.agorachatapp.charc.model.ChatPacket
-import com.agorachatapp.charc.model.ChatPackets
-import com.agorachatapp.charc.model.MultipleChatPacketPutResponse
-import com.agorachatapp.charc.model.PutChatPacketResponse
+import com.agorachatapp.charc.model.*
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.android.*
@@ -85,12 +82,14 @@ class ChatServer(private val baseUrl: String) {
         }
     }
 
-    suspend inline fun<reified T,reified R> postWithBody(url: String, input: T): Response<R>{
+    suspend inline fun<reified T,reified R> postWithBody(url: String, input: T? = null): Response<R>{
         try {
             val response = client.post<R> {
                 url(url)
                 contentType(ContentType.Application.Json)
-                body = input as Any
+                if(input!=null){
+                    body = input
+                }
             }
             return Response(response)
         } catch (e: Exception) {
@@ -115,5 +114,9 @@ class ChatServer(private val baseUrl: String) {
 
     suspend fun puts(chatPackets: ChatPackets): Response<MultipleChatPacketPutResponse>{
         return postWithBody("${baseUrl}/puts",chatPackets)
+    }
+
+    suspend fun getChat(chatId: String): Response<GetChatResponse>{
+        return postWithBody("${baseUrl}/getChat/${chatId}", null as Any?)
     }
 }

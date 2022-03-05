@@ -5,9 +5,9 @@ import org.joda.time.DateTimeZone
 import java.util.*
 
 
-val guid: String
+val newUid: String
 get(){
-    return UUID.randomUUID().toString()
+    return UUID.randomUUID().toString()+utcTimestamp.toString()
 }
 
 val utcTimestamp: Long
