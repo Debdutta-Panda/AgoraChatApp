@@ -29,7 +29,7 @@ class ChatDb(private val sender: String) {
             """.trimIndent()
     }
 
-    suspend fun get(chatId: String):ChatPacket?{
+    suspend fun get(chatId: String): ChatPacket?{
         val r = Sqlide{
             table(tableDefinition).run {
                 val m = select(allColumns).where("$chatIdColumn='$chatId'").get()[0].map
@@ -78,7 +78,7 @@ class ChatDb(private val sender: String) {
         } else{
             val prev = Status.decode(prevStat)
             val new = Status.decode(newStat)
-            prev.upgrade(new).encode()
+            prev.upgrade(new).encoded()
         }
     }
 

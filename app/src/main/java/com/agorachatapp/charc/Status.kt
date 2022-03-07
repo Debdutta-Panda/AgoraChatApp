@@ -3,6 +3,23 @@ package com.agorachatapp.charc
 class Status {
     private var values = mutableListOf<Int>()
     companion object{
+        //////////////////////////
+        const val progress = 0
+        ///////////////////////////////
+        const val created = 1
+        const val received_by_server = 2
+        const val received_by_receiver = 3
+        //////////////////////////////
+        val CREATED = Status().apply {
+            set(progress, created)
+        }
+        val RECEIVED_BY_RECEIVER = Status().apply {
+            set(received_by_receiver, received_by_receiver)
+        }
+        val RECEIVED_BY_SERVER = Status().apply {
+            set(received_by_receiver, received_by_server)
+        }
+        //////////////////////////
         const val zero = '0'
         fun decode(input: String): Status{
             val r = Status()
@@ -32,7 +49,8 @@ class Status {
             values[index] = value
         }
     }
-    fun encode(): String{
+    val encoded: String
+    get(){
         return String(
             values.map {
                 Char(it+zero.code)
@@ -52,6 +70,18 @@ class Status {
             if(item>this[index]){
                 cloned[index] = item
             }
+        }
+        val r = Status()
+        r.values = cloned.toMutableList()
+        return r
+    }
+
+    fun set(new: Status): Status {
+        val cloned = values.map {
+            it
+        }.toMutableList()
+        new.forEachIndexed{ index,item->
+            cloned[index] = item
         }
         val r = Status()
         r.values = cloned.toMutableList()

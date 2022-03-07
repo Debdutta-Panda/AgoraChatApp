@@ -32,6 +32,9 @@ import com.agorachatapp.charc.ChatServer
 import com.agorachatapp.charc.model.ChatPacket
 import com.agorachatapp.charc.model.ChatPackets
 import com.agorachatapp.tokener.rtm.RtmTokenBuilder
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.gson.Gson
 import io.agora.rtm.*
 import kotlinx.coroutines.CoroutineScope
@@ -115,7 +118,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("gfdgfdgfdg52", "Fetching FCM registration token failed", task.exception)
+                return@OnCompleteListener
+            }
+            val token = task.result
+            Log.w("gfdgfdgfdg52", token?:"not found")
+        })
         setContent {
             Surface(
                 modifier = Modifier.fillMaxSize(),
