@@ -1,5 +1,6 @@
 package com.agorachatapp.charc.model
 
+import com.agorachatapp.charc.Status
 import com.google.gson.Gson
 import kotlinx.serialization.Serializable
 
@@ -30,17 +31,50 @@ data class ChatPackets(
         val receiver: String,
         val timestamp: Long,
         val data: ChatPacketData? = null,
-        val meta: ChatPacketMeta? = null
+        val meta: ChatPacketMeta? = null,
+        var travelled: Int = TravelPoints.creator
     ) {
-        fun clone(): ChatPacket{
+        object TravelPoints{
+            const val creator = 1
+            const val database = 2
+            const val server = 4
+            const val agora = 8
+        }
+        fun clone(meta: ChatPacketMeta? = null): ChatPacket{
             return ChatPacket(
                 chatId,
                 sender,
                 receiver,
                 timestamp,
                 data?.clone(),
-                meta?.clone()
+                meta ?: this.meta?.clone()
             )
+        }
+        fun updated(meta: ChatPacketMeta): ChatPacket{
+            var r = clone()
+            r.meta?.status =
+                Status
+                    .decode(r.meta?.status?:"")
+                    .set(
+                            Status
+                                .decode(meta.status?:"")
+                    )
+                    .encoded
+            r.meta?.progress = meta.progress
+            return r
+        }
+        fun upgraded(meta: ChatPacketMeta): ChatPacket{
+            var r = clone()
+            r.meta?.status =
+                Status
+                    .decode(r.meta?.status?:"")
+                    .upgrade(
+                        Status
+                            .decode(meta.status?:"")
+                    )
+                    .encoded
+            r.meta?.progress = meta.progress
+            return r
         }
         fun jsonString(): String {
             return Gson().toJson(this)
@@ -58,7 +92,7 @@ data class ChatPackets(
 
         @Serializable
         data class ChatPacketMeta(
-            val progress: Int? = null,
+            var progress: Int? = null,
             var status: String? = null
         ) {
             fun clone(): ChatPacketMeta {

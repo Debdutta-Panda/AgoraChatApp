@@ -9,7 +9,7 @@ class NotificationService : FirebaseMessagingService() {
 
     override fun onNewToken(p0: String) {
         super.onNewToken(p0)
-        Log.d("agora_push_notification",p0)
+        
     }
 
 

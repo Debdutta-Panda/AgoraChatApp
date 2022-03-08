@@ -66,6 +66,13 @@ class Status {
         val cloned = values.map {
             it
         }.toMutableList()
+        val myCount = cloned.size
+        val newCount = new.values.count()
+        if(newCount>myCount){
+            cloned.addAll(MutableList(newCount-myCount){
+                0
+            })
+        }
         new.forEachIndexed{ index,item->
             if(item>this[index]){
                 cloned[index] = item

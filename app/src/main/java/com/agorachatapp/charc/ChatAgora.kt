@@ -1,6 +1,7 @@
 package com.agorachatapp.charc
 
 import android.app.Application
+import android.util.Log
 import com.agorachatapp.MainActivity
 import com.agorachatapp.R
 import com.agorachatapp.charc.model.ChatPackets
@@ -16,12 +17,11 @@ class ChatAgora(
     private val appCertificate: String
 ) {
     private var loginDone = false
-    private var mRtmClient: RtmClient? = null
     private var userId = ""
     private var rtmClient: RtmClient? = null
     private val mListenerList: MutableList<RtmClientListener> = ArrayList()
     private val onMessageReceivedListeners = mutableListOf<(ChatPackets?, String)->Unit>()
-    fun init() {
+    init{
         try {
             rtmClient = RtmClient.createInstance(application, appId, object : RtmClientListener {
                 override fun onConnectionStateChanged(state: Int, reason: Int) {
@@ -69,7 +69,9 @@ class ChatAgora(
 
                 }
             })
+            
         } catch (e: Exception) {
+            
         }
     }
 
@@ -91,7 +93,7 @@ class ChatAgora(
             RtmTokenBuilder.Role.Rtm_User,
             0
         )
-        mRtmClient?.login(token, userId, object : ResultCallback<Void?> {
+        rtmClient?.login(token, userId, object : ResultCallback<Void?> {
             override fun onSuccess(responseInfo: Void?) {
                 loginDone = true
                 callback(true)
@@ -114,7 +116,7 @@ class ChatAgora(
                 RtmTokenBuilder.Role.Rtm_User,
                 0
             )
-            mRtmClient?.login(token, userId, object : ResultCallback<Void?> {
+            rtmClient?.login(token, userId, object : ResultCallback<Void?> {
                 override fun onSuccess(responseInfo: Void?) {
                     cont.resume(true)
                 }
@@ -126,7 +128,7 @@ class ChatAgora(
         }
     suspend fun logout(): Boolean =
     suspendCoroutine{cont->
-        mRtmClient?.logout(object : ResultCallback<Void?> {
+        rtmClient?.logout(object : ResultCallback<Void?> {
             override fun onSuccess(responseInfo: Void?) {
                 cont.resume(true)
             }
@@ -153,9 +155,9 @@ class ChatAgora(
         }
 
     fun sendToPeerAsync(peerId: String, chatPackets: ChatPackets, callback: (Boolean) -> Unit){
-        val message = mRtmClient?.createMessage()
+        val message = rtmClient?.createMessage()
         message?.text = chatPackets.jsonString()
-        mRtmClient?.sendMessageToPeer(
+        rtmClient?.sendMessageToPeer(
             peerId,
             message,
             SendMessageOptions(),
@@ -165,7 +167,7 @@ class ChatAgora(
                 }
 
                 override fun onFailure(errorInfo: ErrorInfo) {
-                    callback(true)
+                    callback(false)
                 }
             }
         )

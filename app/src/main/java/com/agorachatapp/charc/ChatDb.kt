@@ -3,6 +3,7 @@ package com.agorachatapp.charc
 import android.content.ContentValues
 import com.Sqlide
 import com.agorachatapp.charc.model.ChatPacket
+import com.agorachatapp.utcTimestamp
 import org.json.JSONObject
 
 class ChatDb(private val sender: String) {
@@ -13,6 +14,7 @@ class ChatDb(private val sender: String) {
         private const val senderColumn = "sender"
         private const val receiverColumn = "receiver"
         private const val timestampColumn = "timestamp"
+        private const val updated = "updated"
         private const val dataColumn = "data"
         private const val statusColumn = "status"
         private const val allColumns = "*"
@@ -23,6 +25,7 @@ class ChatDb(private val sender: String) {
                         $senderColumn varchar(255) NOT NULL,
                         $receiverColumn varchar(255) NOT NULL,
                         $timestampColumn int,                        
+                        $updated int NOT NULL,                        
                         $dataColumn TEXT,
                         $statusColumn TEXT
                     );
@@ -60,11 +63,12 @@ class ChatDb(private val sender: String) {
         if(packet.meta?.status != null){
             val prevStat = getStatus(packet.chatId)
             val newStat = packet.meta.status
-            val composedStat = composeStatus(prevStat,newStat)
+            val composedStat = composeStatus(prevStat,newStat?:"")
             if(prevStat!=composedStat){
                 update(
                     ContentValues().apply {
                         put(statusColumn,composedStat)
+                        put(updated, utcTimestamp)
                     },
                     "$chatIdColumn='${packet.chatId}'"
                 )
@@ -78,7 +82,7 @@ class ChatDb(private val sender: String) {
         } else{
             val prev = Status.decode(prevStat)
             val new = Status.decode(newStat)
-            prev.upgrade(new).encoded()
+            prev.upgrade(new).encoded
         }
     }
 
@@ -103,6 +107,7 @@ class ChatDb(private val sender: String) {
                     put(timestampColumn,packet.timestamp)
                     put(dataColumn,packet.data.toString())
                     put(statusColumn,packet.meta?.status)
+                    put(updated, utcTimestamp)
                 }
             )
         }
