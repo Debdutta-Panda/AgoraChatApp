@@ -16,6 +16,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -35,9 +36,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-
     private var senderId = ""
-    private val messages = mutableListOf<ChatPacket>()
+    private val messages = mutableStateListOf<ChatPacket>()
     private var myId: String = ""
     private val messageCardCornerRadius = 6
     private val messageCardCornerElevation = 10
@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
         if(savedInstanceState==null){
             (application as App).initializeChatClient(senderId)
             ChatClient.instance?.frontendNotificationListener = {
-                messages.addAll(it)
+                mergeMessages(it)
             }
         }
         FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
@@ -84,6 +84,21 @@ class MainActivity : ComponentActivity() {
                     PAGE.FRIEND -> FriendPageContent()
                     PAGE.MESSAGE -> MessagePageContent()
                 }
+            }
+        }
+    }
+
+    private fun mergeMessages(it: List<ChatPacket>) {
+        it.forEach { incoming ->
+            val id = incoming.chatId
+            val index = messages.indexOfFirst { existed->
+                existed.chatId == id
+            }
+            if(index==-1){
+                messages.add(incoming)
+            }
+            else{
+                messages[index] = incoming
             }
         }
     }

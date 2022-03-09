@@ -1,9 +1,11 @@
 package com.agorachatapp.charc
 
 import android.content.ContentValues
+import android.util.Log
 import com.Sqlide
 import com.agorachatapp.charc.model.ChatPacket
 import com.agorachatapp.utcTimestamp
+import kotlinx.coroutines.delay
 import org.json.JSONObject
 
 class ChatDb(private val sender: String) {
@@ -47,6 +49,7 @@ class ChatDb(private val sender: String) {
     }
 
     suspend fun put(packet: ChatPacket) {
+        Log.d("sqlide_debug","started")
         Sqlide {
             table(tableDefinition).apply {
                 if(!chatExists(packet.chatId)){
@@ -57,6 +60,7 @@ class ChatDb(private val sender: String) {
                 }
             }
         }
+        Log.d("sqlide_debug","ended")
     }
 
     private fun Sqlide.Table.updateChat(packet: ChatPacket) {

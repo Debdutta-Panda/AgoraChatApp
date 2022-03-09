@@ -13,6 +13,14 @@ data class ChatPackets(
         return Gson().toJson(this)
     }
 
+    fun clone(): ChatPackets{
+        return ChatPackets(
+            items.map {
+                it.clone()
+            }
+        )
+    }
+
     companion object {
         fun fromString(json: String): ChatPackets? {
             try {

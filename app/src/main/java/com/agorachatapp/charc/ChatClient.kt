@@ -6,6 +6,7 @@ import com.agorachatapp.charc.model.ChatPacket
 import com.agorachatapp.charc.model.ChatPackets
 import com.agorachatapp.newUid
 import com.agorachatapp.utcTimestamp
+import io.ktor.utils.io.*
 import kotlinx.coroutines.delay
 
 class ChatClient private constructor(
@@ -24,17 +25,22 @@ class ChatClient private constructor(
 
     var frontendNotificationListener: (List<ChatPacket>)->Unit = {}
     private fun setupCircuit() {
-        val dbGate = GateCircuit.Gate<ChatPackets>{ it ->
-            charLog("db")
-            it.forEach {
+        val dbGate = chatCircuit.newGate("db"){ it ->
+            val filtered = it.filter {
+                it.success!=GateCircuit.Success.FALSE
+            }
+            var iterationCount = -1
+            filtered.forEach {
                 it.data.items.forEach {
+                    if(++iterationCount>0){
+                        delay(10)
+                    }
                     chatDb.put(it)
                 }
             }
-            it
+            filtered
         }
-        val agoraGate = GateCircuit.Gate<ChatPackets>{ it ->
-            charLog("agora")
+        val agoraGate = chatCircuit.newGate("agora"){ it ->
             val allPackets = mutableListOf<ChatPacket>()
             it.forEach {
                 allPackets.addAll(it.data.items)
@@ -42,15 +48,19 @@ class ChatClient private constructor(
             allPackets.removeAll {
                 it.travelled and ChatPacket.TravelPoints.agora == ChatPacket.TravelPoints.agora
             }
-            val toSend = allPackets.map {
+            if(allPackets.isEmpty()){
+                return@newGate emptyList()
+            }
+            val asPrev = ChatPackets(allPackets)
+            val toSend = asPrev.clone()
+            toSend.items.forEach {
                 it.upgraded(
                     ChatPacket.ChatPacketMeta(
                     status = Status.RECEIVED_BY_RECEIVER.encoded
                 ))
                 it.travelled = it.travelled or ChatPacket.TravelPoints.agora
-                it
             }
-            val toSendGroupBy = toSend.groupBy {
+            val toSendGroupBy = toSend.items.groupBy {
                 it.receiver
             }
             var iterationCount = -1
@@ -70,6 +80,11 @@ class ChatClient private constructor(
                     ))
                 }
                 else{
+                    chatPackets.items.forEach {
+                        it.meta?.status = Status.decode(it.meta?.status?:"").apply {
+                            set(Status.progress,Status.created)
+                        }.encoded
+                    }
                     results.add(GateCircuit.Result(
                         GateCircuit.Success.FALSE,
                         chatPackets
@@ -78,42 +93,48 @@ class ChatClient private constructor(
             }
             results
         }
-        val serverGate = GateCircuit.Gate<ChatPackets>{ it ->
-            charLog("server")
+        val serverGate = chatCircuit.newGate("server"){ it ->
             val allPackets = mutableListOf<ChatPacket>()
             it.forEach {
                 allPackets.addAll(it.data.items)
             }
+            Log.d("que_bug4",allPackets.size.toString())
             allPackets.removeAll {
                 it.travelled and ChatPacket.TravelPoints.server == ChatPacket.TravelPoints.server
             }
-            val toSend = allPackets.map {
+            Log.d("que_bug5",allPackets.size.toString())
+            if(allPackets.isEmpty()){
+                return@newGate emptyList()
+            }
+            val asPrev = ChatPackets(allPackets)
+            val toSendPackets = asPrev.clone()
+            toSendPackets.items.forEach {
                 it.travelled = it.travelled or ChatPacket.TravelPoints.server
-                it
             }
             val results = mutableListOf<GateCircuit.Result<ChatPackets>>()
-
-            val cp = ChatPackets(toSend)
-            val success = chatServer.puts(cp)
+            val success = chatServer.puts(toSendPackets)
             if(success.data?.success==true){
-                results.add(GateCircuit.Result(GateCircuit.Success.TRUE,cp))
+                toSendPackets.items.forEach {
+                    it.meta?.status = Status.decode(it.meta?.status?:"").upgrade(Status.RECEIVED_BY_SERVER).encoded
+                }
+                results.add(GateCircuit.Result(GateCircuit.Success.TRUE,toSendPackets))
             }
             else{
-                results.add(GateCircuit.Result(GateCircuit.Success.FALSE,cp))
+                results.add(GateCircuit.Result(GateCircuit.Success.FALSE, asPrev))
             }
             results
         }
-        val frontendGate = GateCircuit.Gate<ChatPackets>{ it ->
-            charLog("frontend")
+        val frontendGate = chatCircuit.newGate("frontend"){ it ->
             val allPackets = mutableListOf<ChatPacket>()
             it.forEach {
                 allPackets.addAll(it.data.items)
             }
+            frontendNotificationListener(allPackets)
             emptyList()
         }
         dbGate.nextStages.apply {
-            add(agoraGate)
             add(frontendGate)
+            add(agoraGate)
         }
         agoraGate.nextStages.apply {
             add(dbGate)
@@ -122,11 +143,6 @@ class ChatClient private constructor(
         serverGate.nextStages.apply {
             add(dbGate)
         }
-
-        chatCircuit.gates["db"] = dbGate
-        chatCircuit.gates["agora"] = agoraGate
-        chatCircuit.gates["server"] = serverGate
-        chatCircuit.gates["ui"] = frontendGate
     }
 
     companion object{
@@ -164,7 +180,7 @@ class ChatClient private constructor(
 
     suspend fun newChat(text: String, receiver: String){
         val cp = createChat(text, sender,receiver)
-        chatCircuit.gates["db"]?.put(listOf(
+        chatCircuit.gates["db"]?.put("start",listOf(
             GateCircuit.Result(
                 GateCircuit.Success.NONE,
                 ChatPackets(

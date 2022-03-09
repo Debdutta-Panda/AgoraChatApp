@@ -5,19 +5,21 @@ class Status {
     companion object{
         //////////////////////////
         const val progress = 0
+        const val received_by_server = 1
         ///////////////////////////////
         const val created = 1
-        const val received_by_server = 2
-        const val received_by_receiver = 3
+        const val received_by_receiver = 2
+        const val no = 0
+        const val yes = 1
         //////////////////////////////
         val CREATED = Status().apply {
             set(progress, created)
         }
         val RECEIVED_BY_RECEIVER = Status().apply {
-            set(received_by_receiver, received_by_receiver)
+            set(progress, received_by_receiver)
         }
         val RECEIVED_BY_SERVER = Status().apply {
-            set(received_by_receiver, received_by_server)
+            set(received_by_server, yes)
         }
         //////////////////////////
         const val zero = '0'

@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.util.Log
+import kotlinx.coroutines.coroutineScope
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
@@ -15,7 +17,9 @@ import kotlin.coroutines.suspendCoroutine
 typealias Block = Sqlide.() -> Any?
 
 inline fun SQLiteDatabase.transact(block: SQLiteDatabase.() -> Any?): Any? {
+    val millis = System.currentTimeMillis().toString()
     beginTransaction()
+    Log.d("sqlide_bug","started:$millis:${Thread.currentThread().id}")
     return try {
         try {
             return block()
@@ -28,6 +32,7 @@ inline fun SQLiteDatabase.transact(block: SQLiteDatabase.() -> Any?): Any? {
     }
     finally {
         endTransaction()
+        Log.d("sqlide_bug","ended:$millis")
     }
 }
 
@@ -76,24 +81,29 @@ class Sqlide private constructor(){
         }
 
         private fun process() {
+            if(instance.running.get()){
+                return
+            }
             Thread{
                 if(blocks.size>0 && !instance.running.get()){
-                    val block = blocks.removeAt(0)
+                    val block: BlockData? = try {
+                        blocks.removeAt(0)
+                    } catch (e: Exception) {
+                        null
+                    }
                     instance.running.set(true)
                     instance.d = instance.db
                     instance.d?.use { db ->
                         var result = db.transact {
-                            block.block(instance)
+                            block?.block?.invoke(instance)
                         }
-                        block.callback?.invoke(result)
+                        block?.callback?.invoke(result)
                     }
                     instance.d = null
                     instance.running.set(false)
                     process()
                 }
-
             }.start()
-
         }
 
         suspend operator fun invoke(block: Block?): Any? =
